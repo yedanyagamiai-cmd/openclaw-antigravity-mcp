@@ -1,0 +1,39 @@
+{
+  "name": "openclaw-antigravity-mcp",
+  "version": "1.0.0",
+  "description": "Bridge your Antigravity Claude Proxy to any MCP client. Free Claude & Gemini access through MCP tools. Zero dependencies.",
+  "main": "index.js",
+  "bin": {
+    "openclaw-antigravity-mcp": "./index.js"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "antigravity",
+    "claude",
+    "gemini",
+    "ai",
+    "free",
+    "proxy",
+    "llm",
+    "claude-code",
+    "cursor",
+    "model-context-protocol",
+    "openclaw"
+  ],
+  "author": "OpenClaw Intelligence <openclaw-intel@proton.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yedanyagamiai-cmd/openclaw-antigravity-mcp"
+  },
+  "homepage": "https://github.com/yedanyagamiai-cmd/openclaw-antigravity-mcp",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ]
+}

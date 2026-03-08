@@ -1,6 +1,6 @@
 {
   "name": "openclaw-antigravity-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Bridge your Antigravity Claude Proxy to any MCP client. Free Claude & Gemini access through MCP tools. Zero dependencies.",
   "main": "index.js",
   "bin": {

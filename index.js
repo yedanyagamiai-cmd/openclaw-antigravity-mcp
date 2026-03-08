@@ -22,7 +22,7 @@
 const PROXY_URL = process.env.ANTIGRAVITY_URL || 'http://localhost:8080';
 const PROXY_KEY = process.env.ANTIGRAVITY_KEY || 'test';
 
-const SERVER_INFO = { name: 'openclaw-antigravity-mcp', version: '1.0.0' };
+const SERVER_INFO = { name: 'openclaw-antigravity-mcp', version: '1.1.0' };
 const PROTOCOL_VERSION = '2025-03-26';
 
 // ── Tool Definitions ────────────────────────────────────────────
@@ -116,6 +116,15 @@ const TOOLS = [
 
 // ── Proxy Communication ─────────────────────────────────────────
 
+function parseProxyError(text) {
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed?.error?.message) return parsed.error.message;
+    if (parsed?.message) return parsed.message;
+  } catch {}
+  return text.slice(0, 200);
+}
+
 async function proxyFetch(path, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
@@ -130,11 +139,19 @@ async function proxyFetch(path, options = {}) {
     });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Proxy ${res.status}: ${text.slice(0, 500)}`);
+      const msg = parseProxyError(text);
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(`Auth failed (${res.status}): ${msg}. Check ANTIGRAVITY_KEY.`);
+      }
+      if (msg.includes('No auth status') || msg.includes('auth')) {
+        throw new Error(`Auth expired: ${msg}. Re-login in Antigravity app, then restart proxy.`);
+      }
+      throw new Error(`Proxy error (${res.status}): ${msg}`);
     }
     return res.json();
   } catch (e) {
-    if (e.name === 'AbortError') throw new Error('Proxy timeout (30s). Is your proxy running?');
+    if (e.name === 'AbortError') throw new Error('Proxy timeout (30s). Is your proxy running? Try: acc start');
+    if (e.code === 'ECONNREFUSED') throw new Error(`Cannot connect to ${PROXY_URL}. Start your proxy: acc start`);
     throw e;
   } finally {
     clearTimeout(timeout);
@@ -278,13 +295,21 @@ async function handleModels() {
 async function handleStatus() {
   try {
     const health = await proxyHealth();
-    return { proxy_url: PROXY_URL, status: 'connected', ...health };
+    const accounts = health.counts?.available || health.counts?.total || 0;
+    return {
+      proxy_url: PROXY_URL,
+      status: 'connected',
+      accounts,
+      summary: health.summary || `${accounts} account(s)`,
+      latency_ms: health.latencyMs || null,
+      details: health,
+    };
   } catch (e) {
     return {
       proxy_url: PROXY_URL,
       status: 'disconnected',
       error: e.message,
-      hint: 'Start your proxy: npx antigravity-claude-proxy start',
+      fix: 'Start your proxy: npm i -g antigravity-claude-proxy && acc start',
     };
   }
 }
@@ -417,51 +442,83 @@ async function runTest() {
   console.log(`   Proxy: ${PROXY_URL}`);
   console.log('');
 
-  // Test health
-  process.stdout.write('   Health... ');
+  let pass = 0;
+  let warn = 0;
+  let fail = 0;
+
+  // Test 1: Health
+  process.stdout.write('   [1/3] Health...  ');
   try {
     const h = await proxyHealth();
-    console.log(`✅ ${h.status || 'ok'} (${h.accounts?.available || '?'} accounts)`);
+    const count = h.counts?.available || h.counts?.total || (Array.isArray(h.accounts) ? h.accounts.length : '?');
+    console.log(`✅ ${h.status || 'ok'} (${count} account${count !== 1 ? 's' : ''})`);
+    pass++;
   } catch (e) {
     console.log(`❌ ${e.message}`);
-    console.log('\n   Fix: Make sure Antigravity proxy is running:');
-    console.log('     npm i -g antigravity-claude-proxy');
-    console.log('     acc accounts add');
-    console.log('     acc start');
+    fail++;
+    console.log('');
+    console.log('   Proxy not reachable. Setup:');
+    console.log('     1. npm i -g antigravity-claude-proxy');
+    console.log('     2. acc accounts add');
+    console.log('     3. acc start');
     process.exit(1);
   }
 
-  // Test models
-  process.stdout.write('   Models... ');
+  // Test 2: Models
+  process.stdout.write('   [2/3] Models...  ');
   try {
     const m = await proxyModels();
     const models = m.data || m.models || [];
-    console.log(`✅ ${Array.isArray(models) ? models.length : '?'} models available`);
-    if (Array.isArray(models)) {
-      models.forEach((model) => console.log(`     • ${model.id || model}`));
+    if (Array.isArray(models) && models.length > 0) {
+      console.log(`✅ ${models.length} models`);
+      models.forEach((model) => console.log(`          • ${model.id || model}`));
+      pass++;
+    } else {
+      console.log('⚠️  No models returned');
+      warn++;
     }
   } catch (e) {
     console.log(`⚠️  ${e.message}`);
+    warn++;
   }
 
-  // Test chat
-  process.stdout.write('   Chat...   ');
+  // Test 3: Chat
+  process.stdout.write('   [3/3] Chat...    ');
   try {
     const r = await proxyChat('claude-sonnet-4-6', [{ role: 'user', content: 'Say "ok" and nothing else.' }], null, 10);
-    console.log(`✅ ${extractText(r).slice(0, 50)}`);
+    const text = extractText(r).trim();
+    console.log(`✅ Response: "${text.slice(0, 40)}"`);
+    pass++;
   } catch (e) {
-    console.log(`⚠️  ${e.message.slice(0, 80)}`);
+    console.log(`⚠️  ${e.message}`);
+    warn++;
   }
 
-  console.log('\n   Ready! Add to your MCP config:');
-  console.log('   {');
-  console.log('     "mcpServers": {');
-  console.log('       "antigravity": {');
-  console.log('         "command": "npx",');
-  console.log('         "args": ["-y", "openclaw-antigravity-mcp"]');
-  console.log('       }');
-  console.log('     }');
-  console.log('   }');
+  // Summary
+  console.log('');
+  if (pass === 3) {
+    console.log(`   Result: ✅ All tests passed (${pass}/3)`);
+  } else if (fail > 0) {
+    console.log(`   Result: ❌ ${fail} failed, ${warn} warnings, ${pass} passed`);
+  } else {
+    console.log(`   Result: ⚠️  ${pass}/3 passed, ${warn} warnings`);
+    if (warn > 0) {
+      console.log('   Tip: Re-login in Antigravity app if auth expired, then restart proxy.');
+    }
+  }
+
+  console.log('');
+  console.log('   MCP Config (copy to .mcp.json):');
+  console.log('   ┌─────────────────────────────────────────────┐');
+  console.log('   │ {                                           │');
+  console.log('   │   "mcpServers": {                           │');
+  console.log('   │     "antigravity": {                        │');
+  console.log('   │       "command": "npx",                     │');
+  console.log('   │       "args": ["-y", "openclaw-antigravity-mcp"] │');
+  console.log('   │     }                                       │');
+  console.log('   │   }                                         │');
+  console.log('   │ }                                           │');
+  console.log('   └─────────────────────────────────────────────┘');
 }
 
 function showHelp() {

@@ -22,7 +22,7 @@
 const PROXY_URL = process.env.ANTIGRAVITY_URL || 'http://localhost:8080';
 const PROXY_KEY = process.env.ANTIGRAVITY_KEY || 'test';
 
-const SERVER_INFO = { name: 'openclaw-antigravity-mcp', version: '1.1.0' };
+const SERVER_INFO = { name: 'openclaw-antigravity-mcp', version: '1.2.0' };
 const PROTOCOL_VERSION = '2025-03-26';
 
 // ── Tool Definitions ────────────────────────────────────────────

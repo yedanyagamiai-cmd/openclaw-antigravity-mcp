@@ -1,0 +1,24 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      proxyUrl:
+        type: string
+        default: "http://localhost:8080"
+        description: "Your Antigravity Claude Proxy URL"
+      apiKey:
+        type: string
+        default: "test"
+        description: "API key for the proxy"
+    required: []
+  commandFunction:
+    |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', 'openclaw-antigravity-mcp'],
+      env: {
+        ANTIGRAVITY_URL: config.proxyUrl || 'http://localhost:8080',
+        ANTIGRAVITY_KEY: config.apiKey || 'test'
+      }
+    })

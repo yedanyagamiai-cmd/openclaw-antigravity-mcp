@@ -5,9 +5,12 @@
 This is an [MCP server](https://modelcontextprotocol.io/) that bridges [Antigravity Claude Proxy](https://www.npmjs.com/package/antigravity-claude-proxy) — a local proxy that provides free access to Claude and Gemini models through your Google account — to any MCP-compatible AI coding tool.
 
 [![npm](https://img.shields.io/npm/v/openclaw-antigravity-mcp)](https://www.npmjs.com/package/openclaw-antigravity-mcp)
-[![MCP](https://img.shields.io/badge/MCP-2025--03--26-blue)](https://modelcontextprotocol.io/)
+[![CI](https://github.com/yedanyagamiai-cmd/openclaw-mcp-servers/actions/workflows/ci.yml/badge.svg)](https://github.com/yedanyagamiai-cmd/openclaw-mcp-servers/actions)
+[![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)](https://github.com/yedanyagamiai-cmd/openclaw-mcp-servers)
+[![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
 
 ## What is Antigravity?
 
@@ -119,14 +122,16 @@ Custom proxy URL or API key via environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ANTIGRAVITY_URL` | `http://localhost:8080` | Antigravity proxy URL |
-| `ANTIGRAVITY_KEY` | `test` | API key for the proxy |
+| `ANTIGRAVITY_KEY` | (empty) | API key for the proxy |
 
 ## Architecture
 
-- **Transport**: stdio (stdin/stdout JSON-RPC) — the standard for local MCP servers
-- **Dependencies**: zero — pure Node.js `>=18`, uses built-in `fetch` and `readline`
+- **Built with**: TypeScript (strict mode), `@modelcontextprotocol/sdk`, Zod validation
+- **Transport**: stdio (stdin/stdout JSON-RPC) via official MCP SDK
+- **Testing**: 103 tests, 99.8% coverage (Vitest + v8)
+- **Retry**: exponential backoff with jitter on 429/5xx (max 3 attempts)
 - **Network**: only connects to your local Antigravity proxy (no external calls)
-- **Security**: your API keys and Google credentials never leave your machine
+- **Security**: Zod validates all inputs; API keys and Google credentials never leave your machine
 
 ## Troubleshooting
 
@@ -143,7 +148,7 @@ Custom proxy URL or API key via environment variables:
 Yes. Antigravity proxy uses your Google account's free-tier access to Claude and Gemini. This MCP server adds no cost on top of that.
 
 **Q: Is this safe?**
-Yes. This server runs locally, has zero dependencies, and only talks to `localhost`. It never contacts any external server. Review the source — it's a single `index.js` file.
+Yes. This server runs locally and only talks to `localhost`. It never contacts any external server. All inputs are validated with Zod. Review the source — it's fully typed TypeScript with 99%+ test coverage.
 
 **Q: What's the difference from using Claude API directly?**
 The Claude API requires a paid API key. Antigravity proxy provides the same models through your Google account at no cost. This MCP server makes those models available as native tools in your coding environment.

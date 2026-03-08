@@ -1,0 +1,34 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "name": "openclaw-antigravity-mcp",
+  "display_name": "OpenClaw Antigravity MCP",
+  "description": "Bridge your Antigravity Claude Proxy to any MCP client. Free Claude Opus 4.6, Sonnet 4.6, and Gemini 3 access through 5 MCP tools. Zero dependencies.",
+  "repository": {
+    "url": "https://github.com/yedanyagamiai-cmd/openclaw-antigravity-mcp",
+    "source": "github"
+  },
+  "tools": [
+    {
+      "name": "chat",
+      "description": "Chat with Claude or Gemini models. Multi-turn, system prompts, temperature control."
+    },
+    {
+      "name": "reason",
+      "description": "Deep reasoning with extended thinking (chain-of-thought)."
+    },
+    {
+      "name": "code",
+      "description": "Generate, review, debug, refactor, explain, or test code."
+    },
+    {
+      "name": "models",
+      "description": "List all available models on your proxy."
+    },
+    {
+      "name": "status",
+      "description": "Check proxy health and account info."
+    }
+  ],
+  "categories": ["AI", "Developer Tools"],
+  "tags": ["claude", "gemini", "antigravity", "free", "mcp", "llm"]
+}
